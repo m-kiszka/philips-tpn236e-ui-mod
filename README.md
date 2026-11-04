@@ -1,91 +1,112 @@
-# Philips TPN236E — reverse engineering & „Hello World" UI mod
+# Philips TPN236E — reverse engineering & "Hello World" UI mod
 
-Edukacyjny reverse engineering oprogramowania **własnego** telewizora
-**Philips 50PUS7608/12** (Titan OS, chassis **TPN236E**) oraz praktyczna
-modyfikacja jego interfejsu — dodanie ekranu/pozycji **„Hello World"** —
-wdrażana **bez łamania podpisu** obrazu.
+Educational reverse engineering of my **own** Philips **50PUS7608/12** TV
+(Titan OS, chassis **TPN236E**), plus a practical modification of its interface —
+adding a **"Hello World"** screen / menu entry — deployed **without breaking the
+firmware signature**.
 
-> **Zastrzeżenie.** Materiał dotyczy analizy własnego urządzenia w celach
-> edukacyjnych. Ingerencja sprzętowa (UART) i modyfikacje wykonujesz na własną
-> odpowiedzialność — oznaczają utratę gwarancji i ryzyko uszkodzenia.
-> Repozytorium zawiera **wyłącznie nasz oryginalny kod i raport**; firmware
-> producenta oraz jego wypakowane pliki **nie są** tu dołączone (są wykluczone
-> w `.gitignore`).
+> [!WARNING]
+> **Disclaimer.** This concerns analysis of a device I own, for educational
+> purposes only. Hardware access (UART) and any modifications are done at your
+> own risk — they void the warranty and can permanently damage the TV.
+> This repository contains **only original work**; the vendor firmware and its
+> extracted contents are **not** included here (they are excluded in
+> `.gitignore`).
 
-## Co to robi
+## Highlights
 
-- **Analiza firmware (offline):** format pakietu (`TIMG`/`PIMG` → gzip → `NFSB`
-  → squashfs LZO), platforma (Novatek NT72xxx, ARM, Buildroot/BusyBox), oraz
-  łańcuch weryfikacji update'u (RSA-2048 + SHA-256, klucz zakotwiczony w OTP).
-  Wniosek: **zmodyfikowanego obrazu nie wgrasz update loaderem**.
-- **Działający prototyp UI** launchera z pozycją „Hello World" (do obejrzenia w
-  przeglądarce na PC).
-- **Ścieżka wdrożenia bez podpisu:** wbudowany overlay apexe (zapisywalna,
-  niepodpisana partycja) + bind-mount z roota, uzyskanego przez konsolę UART.
-- **Dwie realne integracje z UI:** wyzwalacz na **niebieskim przycisku** pilota
-  (przez natywne `window.S.onkeydown`) oraz **natywny kafelek w Szybkim menu**
-  (patch kotwiczony na unikalnych stringach, zwalidowany `node --check`).
+- **Offline firmware analysis:** package format (`TIMG`/`PIMG` → gzip → `NFSB`
+  → squashfs LZO), platform (Novatek NT72xxx, ARM, Buildroot/BusyBox), and the
+  update verification chain (RSA-2048 + SHA-256, key rooted in OTP).
+  Conclusion: **a modified image cannot be flashed through the update loader**.
+- **Working UI prototype** of the launcher with a "Hello World" entry (viewable
+  in a desktop browser).
+- **Signature-free deployment path:** the firmware's built-in apexe overlay (a
+  writable, unsigned partition) plus a bind-mount from a root shell obtained over
+  the UART serial console.
+- **Three real UI integrations**, each verified in a browser with stubs:
+  - **Hello World** — a screen bound to the remote's **BLUE** button via the UI's
+    own `window.S.onkeydown`, and an optional **native Quick-menu tile**
+    (anchored text patch, validated with `node --check`).
+  - **Device info** — a screen that reads live values through existing read-only
+    `Rpc*Get()` functions.
+  - **State change (demo)** — a fully reversible **mute toggle**
+    (`RpcSoundSysMute`).
 
-## Struktura repo
+## Repository layout
 
 ```
 .
-├─ README.md                                   ← ten plik
-├─ Philips_TPN236E_reverse_engineering.pdf     ← pełny raport (8 stron)
-└─ helloworld_update/
-   ├─ README.md            ← opis modyfikacji + jak obejrzeć prototyp
-   ├─ PATCHES.md           ← jak działają patche + przykłady modyfikacji
-   ├─ run-preview.cmd      ← uruchamia lokalny serwer podglądu
-   ├─ preview/             ← DZIAŁAJĄCY prototyp launchera (HTML/CSS/JS)
-   ├─ webui_patch/         ← wzorzec modułu strony, zaślepki RPC, nota integracyjna
-   └─ deploy/              ← skrypty wdrożeniowe na telewizor
-      ├─ README_deploy.md
-      ├─ deploy_from_root.sh      ← uruchom raz z roota (overlay + inject)
-      ├─ hw_overlay.sh            ← mount/umount/status nakładki
-      ├─ run_custom.sh            ← hook sourcowany przez board/run.sh
-      ├─ inject-helloworld.js     ← rejestracja trasy + przycisk BLUE
-      ├─ patch_native_tile.sh     ← opcjonalny natywny kafelek w menu
-      └─ uninstall_from_root.sh   ← pełne cofnięcie
+├─ README.md
+├─ Philips_TPN236E_reverse_engineering.pdf   full 11-page report (incl. UART guide)
+├─ helloworld_update/                         "Hello World" mod
+│  ├─ preview/                                runnable launcher prototype
+│  ├─ webui_patch/                            page-module pattern, RPC stubs, integration notes
+│  └─ deploy/                                 on-device deploy scripts (overlay, inject, native tile)
+├─ helloworld_devinfo/                        live device-info read (Rpc*Get)
+└─ helloworld_setdemo/                        reversible state-change example (mute toggle)
 ```
 
-> Firmware producenta (`*.upg`, `*.pkg`, `*.zip`) i jego wypakowana zawartość
-> (`extracted/`) nie są wersjonowane — trzymaj je lokalnie, poza repo.
+> Vendor firmware (`*.upg`, `*.pkg`, `*.zip`) and its decompressed contents
+> (`extracted/`) are intentionally **not** versioned — keep them locally.
 
-## Szybki start — podgląd w przeglądarce
+## Quick start (browser preview)
 
-1. Uruchom `helloworld_update/run-preview.cmd` (serwuje z katalogu projektu).
-2. Otwórz `http://127.0.0.1:8731/helloworld_update/preview/index.html`.
-3. Sterowanie jak pilotem: `←` `→`, `Enter`, `Esc`. Kafelek **Hello World**
-   (plakietka `NEW`) otwiera ekran z danymi urządzenia (w przeglądarce — zaślepki).
+No TV required. Serve the project root and open a preview:
 
-Szczegóły: [`helloworld_update/README.md`](helloworld_update/README.md).
+```sh
+# from the repo root
+python -m http.server 8731 --bind 127.0.0.1
+```
 
-## Wdrożenie na telewizor (skrót)
+| Preview | URL |
+| --- | --- |
+| Launcher + Hello World | `http://127.0.0.1:8731/helloworld_update/preview/index.html` |
+| Device info (live read) | `http://127.0.0.1:8731/helloworld_devinfo/preview/index.html` |
+| State change (mute) | `http://127.0.0.1:8731/helloworld_setdemo/preview/index.html` |
 
-Pełna, bezpieczna ścieżka **bez ruszania podpisanego obrazu**:
+Navigate like a remote: `←` `→`, `Enter`, `Esc`. In the previews, RPC calls are
+stubbed with placeholder values; on the TV they hit the real native backend.
 
-1. **root przez UART** (konsola szeregowa; konto root bez hasła).
-2. Pliki na pendrive → `sh .../deploy/deploy_from_root.sh` (kopiuje `page/` do
-   zapisywalnego `/mtd_rwarea`, wstrzykuje nasz skrypt, montuje nakładkę).
-3. Opcjonalnie `patch_native_tile.sh` — dokłada natywny kafelek w Szybkim menu.
-4. Restart aplikacji → **BLUE** otwiera „Hello World" (i/lub kafelek w menu).
+## Deploying to the TV (summary)
 
-Krok po kroku + pułapki (SELinux, trwałość, trzymanie overlay):
+Nothing touches the signed image — we only mount *over* it:
+
+1. **Root over UART** — serial console; the root account has no password
+   (see the report's UART appendix for a step-by-step guide).
+2. Copy the files to a USB stick, then run
+   `helloworld_update/deploy/deploy_from_root.sh` (copies `page/` to the writable
+   `/mtd_rwarea`, injects our script, mounts the overlay).
+3. Optionally run `patch_native_tile.sh` to add a native Quick-menu tile.
+4. Restart the app → the **BLUE** button opens the screen (and/or the menu tile).
+
+Details and caveats (SELinux, persistence): see
 [`helloworld_update/deploy/README_deploy.md`](helloworld_update/deploy/README_deploy.md).
 
 ## Status
 
-| Etap | Stan |
-|---|---|
-| Rozpakowanie firmware (offline) | ✅ |
-| Prototyp UI „Hello World" (przeglądarka) | ✅ zweryfikowany |
-| Analiza update loadera / secure boot | ✅ loaderem się nie da (RSA-2048 + OTP) |
-| Wdrożenie bez podpisu (overlay/bind-mount) | ✅ skrypty gotowe |
-| Trigger: niebieski przycisk (`window.S.onkeydown`) | ✅ zweryfikowany |
-| Natywny kafelek w Szybkim menu | ✅ patch zwalidowany `node --check` |
+| Stage | Status |
+| --- | --- |
+| Firmware unpacking (offline) | Done |
+| Hello World UI prototype (browser) | Verified |
+| Update loader / secure-boot analysis | Flashing a modified image not possible (RSA-2048 + OTP) |
+| Signature-free deployment (overlay / bind-mount) | Scripts ready |
+| Trigger: BLUE button (`window.S.onkeydown`) | Verified |
+| Native Quick-menu tile | Patch validated with `node --check` |
+| Live device read (`Rpc*Get`) | Verified (browser stubs) |
+| Reversible state change (mute) | Verified (browser stubs) |
+| On-device test (real TV) | Pending — requires UART + deploy |
 
-## Pełny raport
+> Everything is verified offline in a browser. Running it on the actual TV is the
+> remaining step and requires hardware access (UART root + deploy).
 
-Komplet ustaleń (format firmware, tablica partycji, łańcuch weryfikacji,
-wnętrze flashera, mechanizm overlay, wdrożenie) jest w
-**`Philips_TPN236E_reverse_engineering.pdf`**.
+## Report
+
+The full write-up (package format, partition table, verification chain, flasher
+internals, overlay mechanism, deployment, and a step-by-step UART appendix) is in
+**[`Philips_TPN236E_reverse_engineering.pdf`](Philips_TPN236E_reverse_engineering.pdf)**.
+
+## License / use
+
+Personal, educational project for my own device. No warranty. Vendor firmware and
+trademarks belong to their respective owners and are not distributed here.
