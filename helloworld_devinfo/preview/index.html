@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Device info — preview</title>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif; color: #789;
+      background:
+        radial-gradient(1000px 500px at 20% -10%, #203040 0%, transparent 60%),
+        #101112;
+    }
+    .hint { padding: 28px 40px; }
+    .hint h3 { color: #cfe3f5; margin: 0 0 6px; }
+    kbd { background: #2b2b2b; border: 1px solid #3a3a3a; border-radius: 6px; padding: 1px 7px; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="hint">
+    <h3>Device info — browser preview</h3>
+    <p>Stubbed <code>Rpc*Get()</code> backend (fake values). On the TV these read real data.</p>
+    <p>Press <kbd>d</kbd> to open / close, or the BLUE button on a real remote.</p>
+  </div>
+
+  <!-- stub the window manager so the native key path is exercised too -->
+  <script>
+    window.S = {
+      handlers: [],
+      onkeydown: function (f) { this.handlers.push(f); },
+      fire: function (name) { var r = false; this.handlers.forEach(function (h) { if (h(name)) r = true; }); return r; }
+    };
+    window.VK_BLUE = 'VK_BLUE';
+  </script>
+  <script src="rpc-stubs-devinfo.js"></script>
+  <script src="../inject-devinfo.js"></script>
+</body>
+</html>
