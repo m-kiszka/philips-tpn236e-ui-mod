@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TPV TV - Hello World update (preview)</title>
+  <!--
+    Standalone browser preview of a "Hello World" menu addition for the
+    Philips 50PUS7608/12 (Titan OS / TPN236E) web UI.
+
+    This is an ORIGINAL recreation of the launcher look-and-feel (dark theme,
+    blue accent) for offline prototyping on a PC. It contains no original
+    firmware graphic.
+
+    BRAND FONT: the @font-face below points at the user's own extracted brand
+    typeface. It resolves only when the preview is served from the PROJECT ROOT
+    (C:\App Projects\philipsTv), e.g. via run-preview.cmd. If the font is not
+    found, the preview falls back to a system sans-serif - still fine.
+  -->
+  <style>
+    @font-face {
+      font-family: 'Neue Frutiger World';
+      src: url('/extracted/apexe/board/mframework/webui/PHI/page/lib/assets/philips/NeueFrutigerWorld-Book.ttf');
+      font-display: swap;
+    }
+    :root {
+      --bg-0: #101112;
+      --bg-1: #1c1d1e;
+      --bg-2: #2b2b2b;
+      --accent: #337fbf;
+      --accent-deep: #164776;
+      --teal: #7fd7d6;
+      --fg: #ffffff;
+      --fg-dim: #b0b0b0;
+      --tile: #1d1f21;
+      --tile-focus: linear-gradient(145deg, #337fbf 0%, #164776 100%);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: 'Neue Frutiger World', 'Segoe UI', Arial, sans-serif;
+      color: var(--fg);
+      background:
+        radial-gradient(1200px 600px at 20% -10%, #203040 0%, transparent 60%),
+        radial-gradient(1000px 700px at 110% 120%, #10212e 0%, transparent 55%),
+        var(--bg-0);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .tv-shell { position: fixed; inset: 0; display: flex; flex-direction: column; }
+
+    .topbar { display: flex; align-items: center; gap: 14px; padding: 22px 40px 0 40px; }
+    .brandmark { font-size: 18px; letter-spacing: 2px; font-weight: 700; color: var(--fg); opacity: .92; }
+    .brandmark small { color: var(--teal); font-weight: 400; letter-spacing: 1px; }
+    .clock { margin-left: auto; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+    .ver-badge {
+      margin-left: 14px; font-size: 12px; color: var(--fg);
+      background: var(--accent-deep); border: 1px solid var(--accent);
+      padding: 4px 10px; border-radius: 999px;
+    }
+
+    .home-label { padding: 28px 40px 6px; font-size: 26px; font-weight: 600; }
+    .home-sub { padding: 0 40px; color: var(--fg-dim); font-size: 14px; }
+
+    .strip-wrap { margin-top: auto; padding: 0 40px 56px; }
+    .strip-title { font-size: 13px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 4px; }
+    .strip { display: flex; gap: 20px; overflow-x: auto; padding: 8px 4px 18px; scrollbar-width: none; }
+    .strip::-webkit-scrollbar { display: none; }
+
+    .tile {
+      flex: 0 0 auto; width: 190px; height: 118px; border-radius: var(--radius);
+      background: var(--tile); border: 1px solid #2f3133;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 16px; cursor: pointer;
+      transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+      position: relative;
+    }
+    .tile .icon { font-size: 30px; line-height: 1; }
+    .tile .name { font-size: 17px; font-weight: 600; }
+    .tile .meta { font-size: 12px; color: var(--fg-dim); }
+    .tile.focused {
+      transform: translateY(-10px) scale(1.06);
+      background: var(--tile-focus); border-color: var(--teal);
+      box-shadow: 0 16px 40px -12px rgba(51,127,191,.7), 0 0 0 2px var(--teal) inset;
+    }
+    .tile.focused .meta { color: #dff; }
+    .tile.is-new::after {
+      content: 'NEW'; position: absolute; top: -9px; right: -9px;
+      background: var(--teal); color: #06303a; font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 999px; letter-spacing: 1px;
+    }
+
+    .hint { padding: 0 40px 22px; color: var(--fg-dim); font-size: 13px; }
+    .hint kbd {
+      background: var(--bg-2); border: 1px solid #3a3a3a; border-bottom-width: 2px;
+      border-radius: 6px; padding: 1px 7px; font-family: inherit; font-size: 12px; color: var(--fg);
+    }
+
+    .virtual-window {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(8,10,12,.78); backdrop-filter: blur(3px);
+      display: none; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .18s ease;
+    }
+    .virtual-window.open { display: flex; opacity: 1; }
+    .panel {
+      width: min(600px, 88vw);
+      background: linear-gradient(160deg, #1b1d1f 0%, #141618 100%);
+      border: 1px solid #333; border-radius: 18px;
+      box-shadow: 0 30px 80px -20px #000;
+      padding: 38px 42px 30px; text-align: center;
+      transform: translateY(14px) scale(.98); transition: transform .18s ease;
+    }
+    .virtual-window.open .panel { transform: none; }
+
+    /* Hello World page component styles (mirrors .component-* naming) */
+    .component-helloworld .badge,
+    .panel .badge {
+      display: inline-block; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--teal); border: 1px solid var(--teal); border-radius: 999px; padding: 4px 12px; margin-bottom: 16px;
+    }
+    .hw-title { font-size: 42px; font-weight: 700; margin-bottom: 8px; }
+    .hw-sub { color: var(--fg-dim); font-size: 15px; margin-bottom: 20px; }
+    .hw-info {
+      text-align: left; background: #121315; border: 1px solid #2c2e30; border-radius: 12px;
+      padding: 8px 16px; margin: 0 auto 16px; max-width: 460px;
+    }
+    .hw-info[aria-busy="true"] { color: var(--fg-dim); text-align: center; padding: 22px; }
+    .hw-row { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid #232527; }
+    .hw-row:last-child { border-bottom: 0; }
+    .hw-k { color: var(--fg-dim); font-size: 14px; }
+    .hw-v { color: var(--fg); font-size: 14px; font-weight: 600; font-family: 'Consolas', monospace; }
+    .hw-note { color: var(--teal); font-size: 13px; min-height: 18px; }
+    .route { font-family: 'Consolas', monospace; color: var(--teal); font-size: 13px; margin-top: 14px; }
+    .panel .close { margin-top: 20px; display: inline-block; color: var(--fg-dim); font-size: 13px; }
+    .panel .close kbd { background: var(--bg-2); border: 1px solid #3a3a3a; border-radius: 6px; padding: 1px 7px; color: var(--fg); }
+  </style>
+</head>
+<body>
+  <div class="tv-shell">
+    <div class="topbar">
+      <div class="brandmark">TPV&nbsp;TV&nbsp;<small>Titan OS</small></div>
+      <div class="clock" id="clock">--:--</div>
+      <div class="ver-badge" id="ver">v236.006.169.001+hw1</div>
+    </div>
+
+    <div class="home-label">Home</div>
+    <div class="home-sub">Good evening &middot; prototype build with the <b>Hello World</b> entry added</div>
+
+    <div class="strip-wrap">
+      <p class="strip-title">Quick menu</p>
+      <div class="strip" id="strip"><!-- tiles injected by JS --></div>
+      <div class="hint">
+        Navigate with <kbd>&larr;</kbd> <kbd>&rarr;</kbd> &nbsp;&middot;&nbsp; open with <kbd>Enter</kbd>
+        &nbsp;&middot;&nbsp; close with <kbd>Esc</kbd> / <kbd>Back</kbd>
+      </div>
+    </div>
+  </div>
+
+  <div class="virtual-window" id="vw">
+    <div class="panel" id="panel"><!-- page content injected here --></div>
+  </div>
+
+  <script src="../webui_patch/rpc-stubs.js"></script>
+  <script>
+    // ---- menu model: existing routes plus the NEW "Hello World" entry ----
+    var Pages = {
+      sources:   { icon: '\u2b1a', name: 'Sources',   route: '/sources_list/sources_list' },
+      apps:      { icon: '\u25a6', name: 'Apps',       route: '/main/launcher' },
+      quickmenu: { icon: '\u2699', name: 'Quick menu', route: '/quickmenu/quickmenu' },
+      settings:  { icon: '\u2261', name: 'Settings',   route: '/settings_RDL/all' },
+      ambilight: { icon: '\u2600', name: 'Ambilight',  route: '/ambilight/ambilightStyleOptionList' },
+      // ---------- added by the Hello World update ----------
+      helloworld:{ icon: '\u263a', name: 'Hello World', route: '/helloworld/hello', isNew: true }
+    };
+
+    var order = ['apps', 'sources', 'quickmenu', 'ambilight', 'settings', 'helloworld'];
+    var focus = 0;
+    var strip = document.getElementById('strip');
+    var vw = document.getElementById('vw');
+    var panel = document.getElementById('panel');
+
+    order.forEach(function (key, i) {
+      var p = Pages[key];
+      var el = document.createElement('div');
+      el.className = 'tile' + (p.isNew ? ' is-new' : '');
+      el.dataset.key = key;
+      el.innerHTML =
+        '<div class="icon">' + p.icon + '</div>' +
+        '<div><div class="name">' + p.name + '</div>' +
+        '<div class="meta">' + p.route + '</div></div>';
+      el.addEventListener('click', function () { focus = i; render(); openRoute(key); });
+      strip.appendChild(el);
+    });
+
+    function render() {
+      [].forEach.call(strip.children, function (el, i) { el.classList.toggle('focused', i === focus); });
+      var f = strip.children[focus];
+      if (f) f.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+
+    function t(id) { return (window.i18n && window.i18n(id)) || id; }
+
+    // ---- read device info through native RPCs (Promise.all fan-out) ----
+    function loadDeviceInfo() {
+      return Promise.all([
+        window.RpcSystemModelGet(),
+        window.RpcSystemSwVersionGet(),
+        window.RpcSystemRegionGet(),
+        window.RpcSystemCountryGet(),
+        window.RpcSystemLanguageGet(),
+        window.RpcSamServerEnvironmentGet(),
+        window.RpcFactoryGetCertApp()
+      ]).then(function (r) {
+        return {
+          model: r[0].model, software: r[1].version, region: r[2].id,
+          country: r[3].id, language: r[4].id,
+          env: window.__envLabel((r[5] && r[5].SeverEnvrionment) || 0),
+          cert: (r[6] && r[6].App) || 'None'
+        };
+      });
+    }
+
+    // ---- the Hello World "page module" (prototype of pages/helloworld/hello.js) ----
+    function renderHelloWorld() {
+      panel.innerHTML =
+        '<div class="badge">Custom page</div>' +
+        '<div class="hw-title">' + t('ID_hello_world') + '</div>' +
+        '<div class="hw-sub">' + t('ID_hw_subtitle') + '</div>' +
+        '<div class="hw-info" aria-busy="true">loading device info...</div>' +
+        '<div class="hw-note"></div>' +
+        '<div class="route">route: /helloworld/hello</div>' +
+        '<div class="close">Press <kbd>Esc</kbd> to go back</div>';
+
+      loadDeviceInfo().then(function (info) {
+        var rows = [
+          ['ID_hw_model', info.model], ['ID_hw_software', info.software],
+          ['ID_hw_region', info.region], ['ID_hw_country', info.country],
+          ['ID_hw_language', info.language], ['ID_hw_env', info.env],
+          ['ID_hw_cert', info.cert]
+        ];
+        var box = panel.querySelector('.hw-info');
+        if (!box) return; // closed meanwhile
+        box.innerHTML = rows.map(function (row) {
+          return '<div class="hw-row"><span class="hw-k">' + t(row[0]) +
+                 '</span><span class="hw-v">' + row[1] + '</span></div>';
+        }).join('');
+        box.setAttribute('aria-busy', 'false');
+        panel.querySelector('.hw-note').textContent =
+          (info.region === 'EU') ? t('ID_hw_eu_note') : t('ID_hw_noneu_note');
+      });
+    }
+
+    function openRoute(key) {
+      var p = Pages[key];
+      if (key === 'helloworld') {
+        renderHelloWorld();
+      } else {
+        panel.innerHTML =
+          '<div class="badge">Existing route</div>' +
+          '<div class="hw-title" style="font-size:30px">' + p.name + '</div>' +
+          '<div class="hw-sub">This route exists in the real UI and is stubbed here.</div>' +
+          '<div class="route">route: ' + p.route + '</div>' +
+          '<div class="close">Press <kbd>Esc</kbd> to go back</div>';
+      }
+      vw.classList.add('open');
+    }
+
+    function closeRoute() { vw.classList.remove('open'); }
+
+    document.addEventListener('keydown', function (e) {
+      if (vw.classList.contains('open')) {
+        if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); closeRoute(); }
+        return;
+      }
+      if (e.key === 'ArrowRight') { focus = Math.min(order.length - 1, focus + 1); render(); }
+      else if (e.key === 'ArrowLeft') { focus = Math.max(0, focus - 1); render(); }
+      else if (e.key === 'Enter') { openRoute(order[focus]); }
+    });
+
+    function tick() {
+      var d = new Date();
+      document.getElementById('clock').textContent =
+        String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+    tick(); setInterval(tick, 10000);
+
+    render();
+  </script>
+</body>
+</html>
