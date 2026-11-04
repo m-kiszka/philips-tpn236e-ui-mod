@@ -1,0 +1,46 @@
+# ============================================================================
+#  Philips TPN236E reverse-engineering project — .gitignore
+#  Repo keeps only OUR original work:
+#    - helloworld_update/   (prototype, patches, deploy scripts)
+#    - Philips_TPN236E_reverse_engineering.pdf   (our report)
+#  Everything below is excluded: vendor firmware (not ours to redistribute),
+#  decompressed firmware trees, and working artifacts/logs/screenshots.
+# ============================================================================
+
+# ---- Vendor firmware images & archives (copyrighted Philips/TPV) -----------
+*.upg
+*.pkg
+*.zip
+Autorun.upg
+upgrade.pkg
+TPN236E_*.zip
+
+# ---- Decompressed / extracted firmware -------------------------------------
+# rootfs, apexe web UI, bootloaders, TEE, initramfs, verification keys, fonts
+extracted/
+
+# ---- Loose binary carves / dumps (if ever produced at repo root) -----------
+*.img
+*.squashfs
+*.bin
+*.payload
+*.cpio
+*.dtb
+
+# ---- Working artifacts, logs, screenshots used during analysis -------------
+.playwright-mcp/
+.hw_patchtest/
+*.log
+*.tmp
+
+# ---- OS / editor cruft -----------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~
+
+# ---- Python / tooling caches -----------------------------------------------
+__pycache__/
+*.pyc
+.venv/
