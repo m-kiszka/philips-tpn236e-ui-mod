@@ -51,6 +51,11 @@ Project heavily utilized Claude Code as an AI code assistant.
 
 > Vendor firmware (`*.upg`, `*.pkg`, `*.zip`) and its decompressed contents
 > (`extracted/`) are intentionally **not** versioned — keep them locally.
+>
+> The analyzed **update and loader packages** (`upgrade.pkg` and the upgrade
+> loader) were obtained from the community firmware archive at
+> [toengel.net/philipsblog](https://toengel.net/philipsblog/); they are not
+> redistributed here.
 
 ## Quick start (browser preview)
 
@@ -107,3 +112,13 @@ Details and caveats (SELinux, persistence): see
 The full write-up (package format, partition table, verification chain, flasher
 internals, overlay mechanism, deployment, and a step-by-step UART appendix) is in
 **[`Philips_TPN236E_reverse_engineering.pdf`](Philips_TPN236E_reverse_engineering.pdf)**.
+
+## References
+
+- Community Philips / Titan OS firmware archive —
+  [toengel.net/philipsblog](https://toengel.net/philipsblog/) — source of the
+  `upgrade.pkg` and upgrade-loader packages analyzed in this project.
+- Titan OS firmware installation guide —
+  [docs.titanos.tv](https://docs.titanos.tv/firmware-installation-guide) —
+  official notes on build types (production `…1` vs debug `…0`), USB
+  `upgrade.pkg` update, and the `pkg.burn.7z` "empty burning" procedure.
