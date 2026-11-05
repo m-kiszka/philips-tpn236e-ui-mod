@@ -1,9 +1,11 @@
 # Philips TPN236E — reverse engineering & "Hello World" UI mod
 
-Educational reverse engineering of my **own** Philips **50PUS7608/12** TV
+Educational reverse engineering of a Philips **50PUS7608/12** TV
 (Titan OS, chassis **TPN236E**), plus a practical modification of its interface —
 adding a **"Hello World"** screen / menu entry — deployed **without breaking the
 firmware signature**.
+
+Project heavily utilized Claude Code as an AI code assistant.
 
 > [!WARNING]
 > **Disclaimer.** This concerns analysis of a device I own, for educational
@@ -105,8 +107,3 @@ Details and caveats (SELinux, persistence): see
 The full write-up (package format, partition table, verification chain, flasher
 internals, overlay mechanism, deployment, and a step-by-step UART appendix) is in
 **[`Philips_TPN236E_reverse_engineering.pdf`](Philips_TPN236E_reverse_engineering.pdf)**.
-
-## License / use
-
-Personal, educational project for my own device. No warranty. Vendor firmware and
-trademarks belong to their respective owners and are not distributed here.
