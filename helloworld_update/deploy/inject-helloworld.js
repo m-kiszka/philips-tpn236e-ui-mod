@@ -102,18 +102,52 @@
     window.__helloworld_hide = hidePanel;
     window.__helloworld_toggle = toggle;
 
-    // 2) native hook via the window manager's own key API
-    var bound = false;
-    if (window.S && typeof window.S.onkeydown === 'function') {
-      window.S.onkeydown(function (e) {
-        var act = isTrigger(keyName(e));
-        if (act === 'toggle') { toggle(); return true; }   // consume
-        if (act === 'close') { hidePanel(); return true; }
-        return false; // let the UI handle everything else
+    // 1b) seed the quickmenu tile into localStorage. CRITICAL for TPN236E:
+    //     the quickmenu renders group 1 from localStorage 'QuickmunuInfo'
+    //     (vendor typo) and group 2 from 'FrequentInfo' — the arrays in
+    //     quickmenu.js are only the factory-fresh fallback. A file-only patch
+    //     is therefore invisible on a set that already has these keys.
+    try {
+      ['QuickmunuInfo'].forEach(function (key) {
+        var raw = null;
+        try { raw = window.localStorage.getItem(key); } catch (e3) {}
+        if (!raw) return;                                  // factory-fresh: file array wins
+        var arr = null;
+        try { arr = JSON.parse(raw); } catch (e4) { return; }
+        if (!Array.isArray(arr) || arr.some(function (x) { return x && x.i18n === 'HELLO_WORLD'; })) return;
+        var maxIdx = 0;
+        arr.forEach(function (x) { if (x && typeof x.index === 'number' && x.index > maxIdx) maxIdx = x.index; });
+        arr.push({ i18n: 'HELLO_WORLD', name: 'hello world', type: -1, index: maxIdx + 1, selected: !1, icon: 'icon_demo_me' });
+        try { window.localStorage.setItem(key, JSON.stringify(arr)); } catch (e5) {}
       });
-      bound = true;
-      if (window.console) console.log('[helloworld] bound to BLUE via window.S.onkeydown');
-    }
+    } catch (e6) {}
+
+    // 2) native hook — TPN236E-specific (verified live 2026-11-22):
+    //    Remote keys arrive at the launcher as PRIMITIVE NUMBERS through
+    //    S.keydown (e.g. VK_BLUE=406, VK_BACK=461), NOT as DOM events and
+    //    NOT as objects with keyName/keyCode. The stock S.onkeydown(fn)
+    //    handler array is also wiped by the base shim's
+    //    checkFactoryStopKeydown() (S.keydownHandlers=[]), so any handler
+    //    registered that way at load time is silently lost. The robust hook
+    //    is therefore wrapping S.keydown itself with a numeric compare.
+    var wrapped = false;
+    try {
+      if (window.S && typeof window.S.keydown === 'function' && !window.S.__hw_wrapped) {
+        var origKeydown = window.S.keydown;
+        var wrappedKeydown = function (e) {
+          var k = String(e);
+          if (window.VK_BLUE != null && k === String(window.VK_BLUE)) { toggle(); return; }
+          if (open && (k === String(window.VK_BACK) || k === 'VK_BACK' || k === 'VK_EXIT')) { hidePanel(); return; }
+          return origKeydown.apply(window.S, arguments);
+        };
+        wrappedKeydown.__hw_orig = origKeydown;
+        window.S.keydown = wrappedKeydown;
+        window.S.__hw_wrapped = true;
+        wrapped = true;
+        if (window.console) console.log('[helloworld] BLUE bound via S.keydown wrapper (numeric VK codes)');
+      }
+    } catch (e2) {}
+    if (!wrapped && window.console) console.log('[helloworld] S.keydown not present; keyboard fallback only (press "h")');
 
     // 3) desktop fallback for browser testing (and as a safety net)
     document.addEventListener('keydown', function (ev) {
