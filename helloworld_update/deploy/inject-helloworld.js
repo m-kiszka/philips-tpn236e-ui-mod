@@ -102,6 +102,26 @@
     window.__helloworld_hide = hidePanel;
     window.__helloworld_toggle = toggle;
 
+    // 1b) seed the quickmenu tile into localStorage. CRITICAL for TPN236E:
+    //     the quickmenu renders group 1 from localStorage 'QuickmunuInfo'
+    //     (vendor typo) and group 2 from 'FrequentInfo' — the arrays in
+    //     quickmenu.js are only the factory-fresh fallback. A file-only patch
+    //     is therefore invisible on a set that already has these keys.
+    try {
+      ['QuickmunuInfo'].forEach(function (key) {
+        var raw = null;
+        try { raw = window.localStorage.getItem(key); } catch (e3) {}
+        if (!raw) return;                                  // factory-fresh: file array wins
+        var arr = null;
+        try { arr = JSON.parse(raw); } catch (e4) { return; }
+        if (!Array.isArray(arr) || arr.some(function (x) { return x && x.i18n === 'HELLO_WORLD'; })) return;
+        var maxIdx = 0;
+        arr.forEach(function (x) { if (x && typeof x.index === 'number' && x.index > maxIdx) maxIdx = x.index; });
+        arr.push({ i18n: 'HELLO_WORLD', name: 'hello world', type: -1, index: maxIdx + 1, selected: !1, icon: 'icon_demo_me' });
+        try { window.localStorage.setItem(key, JSON.stringify(arr)); } catch (e5) {}
+      });
+    } catch (e6) {}
+
     // 2) native hook — TPN236E-specific (verified live 2026-11-22):
     //    Remote keys arrive at the launcher as PRIMITIVE NUMBERS through
     //    S.keydown (e.g. VK_BLUE=406, VK_BACK=461), NOT as DOM events and
